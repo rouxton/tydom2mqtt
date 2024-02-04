@@ -69,7 +69,7 @@ class Configuration:
         return configuration
 
     def override_configuration_for_hassio(self):
-        hassio_options_file_path = '/data/options.json'
+        hassio_options_file_path = '/workspaces/tydom2mqtt/data/options.json'
         try:
             with open(hassio_options_file_path) as f:
                 logger.info(

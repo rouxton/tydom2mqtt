@@ -286,7 +286,7 @@ class TydomClient:
         await self.connection.send(a_bytes)
         return 0
 
-    async def put_alarm_cdata(self, device_id, alarm_id=None, value=None, zone_id=None):
+    async def put_alarm_cdata(self, device_id, alarm_id=None, value=None, zone_cmd='zoneCmd', zone_id=None):
 
         # Credits to @mgcrea on github !
         # AWAY # "PUT /devices/{}/endpoints/{}/cdata?name=alarmCmd HTTP/1.1\r\ncontent-length: 29\r\ncontent-type: application/json; charset=utf-8\r\ntransac-id: request_124\r\n\r\n\r\n{"value":"ON","pwd":{}}\r\n\r\n"
@@ -305,11 +305,17 @@ class TydomClient:
         # pwd
         # zones
 
+        histo_values = ['ON_OFF','OPEN_ISSUES','UNACKED_EVENTS','EVENTS']
+
         if self.alarm_pin is None:
             logger.warning("Tydom alarm pin is not set!")
             pass
         try:
-            if value is "ACK":
+            if value in histo_values:
+                cmd = "histo"
+                body = ('{"value":"' + str(value) +
+                        '","pwd":"' + str(self.alarm_pin) + '"}')
+            elif value is "ACK":
                 cmd = "ackEventCmd"
                 body = ('{"pwd":"' + str(self.alarm_pin) + '"}')
             elif zone_id is None:
@@ -317,15 +323,15 @@ class TydomClient:
                 body = ('{"value":"' + str(value) +
                         '","pwd":"' + str(self.alarm_pin) + '"}')
             else:
-                cmd = "zoneCmd"
+                cmd = zone_cmd
+                if 'part' in zone_cmd:
+                    target = '"part":"' + str(zone_id) + '"'
+                else:
+                    target = '"zones":"[' + str(zone_id) + ']"'    
                 body = (
-                    '{"value":"'
-                    + str(value)
-                    + '","pwd":"'
-                    + str(self.alarm_pin)
-                    + '","zones":"['
-                    + str(zone_id)
-                    + ']"}'
+                    '{"value":"' + str(value) + 
+                    '","pwd":"' + str(self.alarm_pin) + 
+                    '",' + target + '}'
                 )
 
             str_request = (
@@ -341,10 +347,7 @@ class TydomClient:
                 "\r\n\r\n")
 
             a_bytes = bytes(str_request, "ascii")
-            logger.debug(
-                "Sending message to tydom (%s %s)"
-                "PUT cdata",
-                body)
+            logger.debug('Sending message to tydom (%s %s)','PUT cdata',body),
 
             try:
                 await self.connection.send(a_bytes)
@@ -459,18 +462,3 @@ class TydomClient:
         await self.get_info()
         await self.post_refresh()
         await self.get_data()
-
-    async def get_thermostat_custom_presets(self):
-        logger.debug("get presets")
-        return self.thermostat_custom_presets
-
-    async def get_thermostat_custom_current_preset(self, boiler_id):
-        logger.debug("get preset for %s", boiler_id)
-        print(self.current_preset)
-        if str(boiler_id) not in self.current_preset:
-            await self.set_thermostat_custom_current_preset(str(boiler_id), "none")
-        return self.current_preset[str(boiler_id)]
-
-    async def set_thermostat_custom_current_preset(self, boiler_id, preset):
-        logger.debug("set preset %s for %s", preset, boiler_id)
-        self.current_preset[str(boiler_id)] = str(preset)

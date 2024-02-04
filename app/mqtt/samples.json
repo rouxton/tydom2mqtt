@@ -1,0 +1,47 @@
+{
+    "availability": [
+      {
+        "topic": "zigbee2mqtt/bridge/state",
+        "value_template": "{{ value_json.state }}"
+      }
+    ],
+    "device": {
+      "identifiers": [
+        "zigbee2mqtt_0x943469fffe4797fe"
+      ],
+      "manufacturer": "Moes",
+      "model": "Zigbee + RF curtain switch module (MS-108ZR)",
+      "name": "Module VR 3"
+    },
+    "enabled_by_default": false,
+    "entity_category": "diagnostic",
+    "icon": "mdi:wrench-clock",
+    "name": "Calibration time",
+    "object_id": "module_vr_3_calibration_time",
+    "origin": {
+      "name": "Zigbee2MQTT",
+      "sw": "1.34.0",
+      "url": "https://www.zigbee2mqtt.io"
+    },
+    "state_topic": "zigbee2mqtt/Module VR 3",
+    "unique_id": "0x943469fffe4797fe_calibration_time_zigbee2mqtt",
+    "value_template": "{{ value_json.calibration_time }}"
+  }
+  
+  {
+    "state_topic": "enocean2mqtt/lumiere/salon",
+    "value_template": "{{ value_json._RSSI_ }}",
+    "unit_of_measurement": "dBm",
+    "device_class": "signal_strength",
+    "entity_category": "diagnostic",
+    "unique_id": "enocean_D20112_050A5AEE_NONE_rssi",
+    "name": "rssi",
+    "device": {
+      "name": "e2m_lumiere_salon",
+      "identifiers": "050A5AEE",
+      "model": "D2-01-12 @050A5AEE",
+      "manufacturer": "EnOcean",
+      "configuration_url": "http://tools.enocean-alliance.org/EEPViewer/profiles/D2/01/12/D2-01-12.pdf"
+    }
+  }
+

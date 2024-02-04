@@ -6,17 +6,14 @@ import time
 from datetime import datetime
 
 from gmqtt import Client as MQTTClient
+from gmqtt import Message as MQTTMessage
 
 from sensors.Alarm import Alarm
-from sensors.Boiler import Boiler
-from sensors.Cover import Cover
-from sensors.Light import Light
-from sensors.Switch import Switch
-from sensors.ShHvac import ShHvac
 
 logger = logging.getLogger(__name__)
 
-tydom_topic = '+/tydom/#'
+tydom_topic = 'tydom2mqtt/#'
+tydom_status_topic = 'tydom2mqtt/state'
 refresh_topic = 'homeassistant/requests/tydom/refresh'
 
 
@@ -43,6 +40,7 @@ class MqttClient:
         self.mqtt_client = None
         self.home_zone = home_zone
         self.night_zone = night_zone
+        self.status_topic = tydom_status_topic
 
     async def connect(self):
 
@@ -54,7 +52,8 @@ class MqttClient:
                 self.user,
                 self.ssl)
             address = socket.gethostname() + str(datetime.fromtimestamp(time.time()))
-            client = MQTTClient(address)
+            will_message = MQTTMessage(tydom_status_topic, 'dead', will_delay_interval=10)
+            client = MQTTClient(address, will_message=will_message)
             client.on_connect = self.on_connect
             client.on_message = self.on_message
             client.on_disconnect = self.on_disconnect
@@ -118,173 +117,22 @@ class MqttClient:
                 topic,
                 value)
             await self.tydom.connect()
-
-        elif 'set_positionCmd' in str(topic):
-            value = payload.decode()
-            logger.info(
-                'set_positionCmd message received (topic=%s, message=%s)',
-                topic,
-                value)
-            get_id = (topic.split("/"))[2]
-            device_id = (get_id.split("_"))[0]
-            endpoint_id = (get_id.split("_"))[1]
-            await Cover.put_positionCmd(tydom_client=self.tydom, device_id=device_id, cover_id=endpoint_id,
-                                        positionCmd=str(value))
-
-        elif ('set_position' in str(topic)) and not ('set_positionCmd' in str(topic)):
-            value = json.loads(payload)
-            logger.info(
-                'set_position message received (topic=%s, message=%s)',
-                topic,
-                value)
-            get_id = (topic.split("/"))[2]
-            device_id = (get_id.split("_"))[0]
-            endpoint_id = (get_id.split("_"))[1]
-            await Cover.put_position(tydom_client=self.tydom, device_id=device_id, cover_id=endpoint_id, position=str(value))
-
-        elif 'set_tilt' in str(topic):
-            value = json.loads(payload)
-            logger.info(
-                'set_tilt message received (topic=%s, message=%s)',
-                topic,
-                value)
-            get_id = (topic.split("/"))[2]
-            device_id = (get_id.split("_"))[0]
-            endpoint_id = (get_id.split("_"))[1]
-            await Cover.put_tilt(tydom_client=self.tydom, device_id=device_id, cover_id=endpoint_id, tilt=str(value))
-
-        elif 'set_levelCmd' in str(topic):
-            value = payload.decode()
-            logger.info(
-                'set_levelCmd message received (topic=%s, message=%s)',
-                topic,
-                value)
-            get_id = (topic.split("/"))[2]
-            device_id = (get_id.split("_"))[0]
-            endpoint_id = (get_id.split("_"))[1]
-            await Light.put_level_cmd(tydom_client=self.tydom, device_id=device_id, light_id=endpoint_id,
-                                      level_cmd=str(value))
-
-        elif ('set_level' in str(topic)) and not ('set_levelCmd' in str(topic)):
-            value = json.loads(payload)
-            logger.info(
-                'set_level message received (topic=%s, message=%s)',
-                topic,
-                value)
-            get_id = (topic.split("/"))[2]
-            device_id = (get_id.split("_"))[0]
-            endpoint_id = (get_id.split("_"))[1]
-            await Light.put_level(tydom_client=self.tydom, device_id=device_id, light_id=endpoint_id,
-                                  level=str(value))
-
+        
         elif ('set_alarm_state' in str(topic)) and not ('homeassistant' in str(topic)):
             value = payload.decode()
             logger.info(
                 'set_alarm_state message received (topic=%s, message=%s)',
                 topic,
                 value)
-            get_id = (topic.split("/"))[2]
-            device_id = (get_id.split("_"))[0]
-            endpoint_id = (get_id.split("_"))[1]
-            await Alarm.put_alarm_state(tydom_client=self.tydom, device_id=device_id, alarm_id=endpoint_id,
-                                        asked_state=value, home_zone=self.home_zone, night_zone=self.night_zone)
+            await Alarm.put_alarm_state(tydom_client=self.tydom, asked_state=value, home_zone=self.home_zone, night_zone=self.night_zone)
 
-        elif 'set_setpoint' in str(topic):
-            value = json.loads(payload)
-            logger.info(
-                'set_setpoint message received (topic=%s, message=%s)',
-                topic,
-                value)
-            get_id = (topic.split("/"))[2]
-            device_id = (get_id.split("_"))[0]
-            endpoint_id = (get_id.split("_"))[1]
-
-            await Boiler.put_temperature(tydom_client=self.tydom, device_id=device_id, boiler_id=endpoint_id,
-                                         set_setpoint=str(value))
-
-        elif 'set_hvacMode' in str(topic):
+        elif ('get_alarm_histo' in str(topic)) and not ('homeassistant' in str(topic)):
             value = payload.decode()
             logger.info(
-                'set_hvacMode message received (topic=%s, message=%s)',
+                'get_alarm_histo message received (topic=%s, message=%s)',
                 topic,
                 value)
-            get_id = (topic.split("/"))[2]
-            device_id = (get_id.split("_"))[0]
-            endpoint_id = (get_id.split("_"))[1]
-
-            await Boiler.put_hvac_mode(tydom_client=self.tydom, device_id=device_id, boiler_id=endpoint_id,
-                                       set_hvac_mode=str(value))
-
-        elif 'set_thermicLevel' in str(topic):
-            value = payload.decode()
-            logger.info(
-                'set_thermicLevel message received (topic=%s, message=%s)',
-                topic,
-                value)
-            get_id = (topic.split("/"))[2]
-            device_id = (get_id.split("_"))[0]
-            endpoint_id = (get_id.split("_"))[1]
-
-            await Boiler.put_thermic_level(tydom_client=self.tydom, device_id=device_id, boiler_id=endpoint_id,
-                                           set_thermic_level=str(value))
-
-        elif ('set_switch_state' in str(topic)) and not ('homeassistant' in str(topic)):
-            value = payload.decode()
-            logger.info(
-                'set_switch_state message received (topic=%s, message=%s)',
-                topic,
-                value)
-            get_id = (topic.split("/"))[2]
-            device_id = (get_id.split("_"))[0]
-            endpoint_id = (get_id.split("_"))[1]
-
-            # This seems broken, but I'm not entirely clear what it is meant to
-            # do?
-            await Switch.put_switch_state(tydom_client=self.tydom, device_id=device_id, switch_id=endpoint_id, state=value)
-
-        elif 'set_levelCmdGate' in str(topic):
-            value = payload.decode()
-            logger.info(
-                'set_switch_state message received (topic=%s, message=%s)',
-                topic,
-                value)
-            get_id = (topic.split("/"))[2]
-            device_id = (get_id.split("_"))[0]
-            endpoint_id = (get_id.split("_"))[1]
-            await Switch.put_level_cmd_gate(tydom_client=self.tydom, device_id=device_id, switch_id=endpoint_id,
-                                            level_cmd=str(value))
-
-        elif ('set_levelGate' in str(topic)) and not ('set_levelCmd' in str(topic)):
-            value = json.loads(payload)
-            logger.info(
-                'set_levelGate message received (topic=%s, message=%s)',
-                topic,
-                value)
-            get_id = (topic.split("/"))[2]
-            device_id = (get_id.split("_"))[0]
-            endpoint_id = (get_id.split("_"))[1]
-            await Switch.put_level_gate(tydom_client=self.tydom, device_id=device_id, switch_id=endpoint_id,
-                                        level=str(value))
-
-        elif 'set_shHvacTemperature' in str(topic):
-            value = payload.decode()
-            logger.info(
-                'set_shHvacTemperature message received (topic=%s, message=%s)',
-                topic,
-                value)
-            get_id = (topic.split("/"))[2]
-            device_id = (get_id.split("_"))[0]
-            await ShHvac.put_temperature(tydom_client=self.tydom, device_id=device_id, temperature=str(value))
-
-        elif 'set_shHvacBoost' in str(topic):
-            value = payload.decode()
-            logger.info(
-                'set_shHvacBoost message received (topic=%s, message=%s)',
-                topic,
-                value)
-            get_id = (topic.split("/"))[2]
-            device_id = (get_id.split("_"))[0]
-            await ShHvac.put_boost(tydom_client=self.tydom, device_id=device_id, boost=value)
+            await Alarm.get_alarm_event(tydom_client=self.tydom, asked_state=value)
 
     @staticmethod
     def on_disconnect(cmd, packet):

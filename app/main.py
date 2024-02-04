@@ -44,29 +44,31 @@ async def listen_tydom():
     while True:
         try:
             await tydom_client.connect()
-            await tydom_client.setup()
+            await tydom_client.setup()       
+            mqtt_client.mqtt_client.publish(mqtt_client.status_topic,'running',qos=0,retain=False)
             while True:
                 try:
-                    incoming_bytes_str = await tydom_client.connection.recv()
+                    incoming_bytes_str = await tydom_client.connection.recv()                    
                     message_handler = MessageHandler(
                         incoming_bytes=incoming_bytes_str,
                         tydom_client=tydom_client,
                         mqtt_client=mqtt_client,
-                    )
+                    )                    
                     await message_handler.incoming_triage()
                 except websockets.ConnectionClosed as e:
                     logger.error("Websocket connection closed: %s", e)
-                    await tydom_client.disconnect()
+                    await tydom_client.disconnect()                    
                     break
                 except Exception as e:
                     logger.warning("Unable to handle message: %s", e)
-                    await tydom_client.disconnect()
+                    await tydom_client.disconnect()                    
+                    mqtt_client.mqtt_client.publish(mqtt_client.status_topic,'dead',qos=0,retain=False)
 
         except socket.gaierror as e:
-            logger.error("Socket error (%s)", e)
+            logger.error("Socket error (%s)", e)            
             sys.exit(1)
         except ConnectionRefusedError as e:
-            logger.error("Connection refused (%s)", e)
+            logger.error("Connection refused (%s)", e)            
             sys.exit(1)
 
 
@@ -99,6 +101,7 @@ async def shutdown(signal, loop):
         # Close connections
         await tydom_client.disconnect()
 
+        mqtt_client.mqtt_client.publish(mqtt_client.status_topic,'dead',qos=0,retain=False)
         # Cancel async tasks
         tasks = [t for t in asyncio.all_tasks(
         ) if t is not asyncio.current_task()]

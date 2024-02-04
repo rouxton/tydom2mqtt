@@ -1,0 +1,11 @@
+{
+    "TYDOM_MAC": "001A25041F5B",
+    "TYDOM_IP": "192.168.101.41",
+    "TYDOM_PASSWORD": "rx000407DD",
+    "MQTT_HOST": "192.168.101.72",
+    "MQTT_USER": "mqtt",
+    "MQTT_PASSWORD": "rx000407MQ@",
+    "LOG_LEVEL": "DEBUG",
+    "TYDOM_ALARM_PIN": "1234"
+}
+
